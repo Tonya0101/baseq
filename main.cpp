@@ -67,7 +67,7 @@ void saveData() {
 
     for (const auto& student : students) {
         file << student.id << "|" << student.fullName << "|" << student.age << "|"
-             << student.direction << "|" << student.group << "|" << student.startDate << endl;
+             << student.direction << "|" << student.group << "|" << student.startDate << "|" << endl;
     }
     file.close();
 }
