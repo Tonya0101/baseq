@@ -1,277 +1,268 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <iomanip>
-#include <ctime>
+/**
+ * База данных учеников Кванториума
+ * Консольное приложение для управления базой данных учеников
+ */
+
+// Стандартные библиотеки C++
+#include <iostream>    // Для ввода/вывода в консоли
+#include <fstream>     // Для работы с файлами (чтение и запись)
+#include <string>      // Для работы со строками (std::string, std::wstring)
+#include <vector>      // Для использования динамических массивов (std::vector)
+#include <locale>      // Для работы с локалью, поддержка разных языков и кодировок
+#include <codecvt>     // Для конвертации между различными кодировками (например, UTF-8 и UTF-16)
+
+// Библиотеки Windows для поддержки русского языка в консоли
+#include <windows.h>   // Для работы с консолью Windows (например, установка кодировки)
+#include <fcntl.h>     // Для управления режимом ввода/вывода (например, для Unicode)
+#include <io.h>        // Для работы с низкоуровневыми операциями ввода/вывода
 
 using namespace std;
 
-// Структура для хранения данных об ученике
-struct Student {
-    int id;
-    string fullName;
-    int age;
-    string direction;
-    string group;
-    string startDate;
+/**
+ * Структура для хранения данных об ученике
+ */
+struct Uchenik {
+    int id;              // Уникальный идентификатор ученика
+    wstring fio;         // ФИО ученика
+    int vozrast;         // Возраст ученика
+    wstring napravlenie; // Направление обучения
+    wstring gruppa;      // Группа ученика
+    wstring dataNachala; // Дата начала обучения
 };
 
 // Глобальные переменные
-vector<Student> students;
-const string FILENAME = "students.txt";
-int nextId = 1;
+vector<Uchenik> spisokUchenikov;  // Список всех учеников
+const string imyaFaila = "students.txt";  // Имя файла для сохранения данных
+int sleduyushiyId = 1;            // Следующий доступный ID для нового ученика
 
-// Функции для работы с файлом
-void loadData() {
-    ifstream file(FILENAME);
-    if (!file.is_open()) {
-        cout << "Файл с данными не найден. Будет создан новый файл." << endl;
+/**
+ * Загружает данные из файла в память
+ */
+void zagruzitDannye() {
+    wifstream fail(imyaFaila);  // Открытие файла для чтения
+    if (!fail.is_open()) {  // Если файл не найден, выводим сообщение
+        wcout << L"Файл с данными не найден. Будет создан новый файл." << endl;
         return;
     }
+    
+    fail.imbue(locale(fail.getloc(), new codecvt_utf8<wchar_t>));  // Установка кодировки для работы с UTF-8
 
-    students.clear();
-    string line;
-    while (getline(file, line)) {
-        Student student;
-        size_t pos = 0;
-        string token;
-        int field = 0;
+    spisokUchenikov.clear();  // Очищаем список перед загрузкой данных
+    wstring stroka;
+    while (getline(fail, stroka)) {  // Чтение файла построчно
+        Uchenik uchenik;
+        size_t poz = 0;
+        wstring chast;
+        int pole = 0;
         
-        while ((pos = line.find("|")) != string::npos) {
-            token = line.substr(0, pos);
-            switch(field) {
-                case 0: student.id = stoi(token); break;
-                case 1: student.fullName = token; break;
-                case 2: student.age = stoi(token); break;
-                case 3: student.direction = token; break;
-                case 4: student.group = token; break;
-                case 5: student.startDate = token; break;
+        // Разделение строки на части по символу "|"
+        while ((poz = stroka.find(L"|")) != wstring::npos) {
+            chast = stroka.substr(0, poz);  // Извлекаем часть строки
+            switch(pole) {
+                case 0: uchenik.id = stoi(chast); break;  // Преобразуем строку в целое число и присваиваем ID
+                case 1: uchenik.fio = chast; break;  // Присваиваем ФИО
+                case 2: uchenik.vozrast = stoi(chast); break;  // Присваиваем возраст
+                case 3: uchenik.napravlenie = chast; break;  // Присваиваем направление
+                case 4: uchenik.gruppa = chast; break;  // Присваиваем группу
+                case 5: uchenik.dataNachala = chast; break;  // Присваиваем дату начала обучения
             }
-            line.erase(0, pos + 1);
-            field++;
+            stroka.erase(0, poz + 1);  // Удаляем уже обработанную часть строки
+            pole++;
         }
-        students.push_back(student);
-        nextId = max(nextId, student.id + 1);
-    }
-    file.close();
-}
-
-void saveData() {
-    ofstream file(FILENAME);
-    if (!file.is_open()) {
-        cout << "Ошибка при сохранении файла!" << endl;
-        return;
-    }
-
-    for (const auto& student : students) {
-        file << student.id << "|" << student.fullName << "|" << student.age << "|"
-             << student.direction << "|" << student.group << "|" << student.startDate << "|" << endl;
-    }
-    file.close();
-}
-
-// Функции для работы с данными
-void addStudent() {
-    Student student;
-    student.id = nextId++;
-    
-    cout << "\nВведите ФИО: ";
-    cin.ignore();
-    getline(cin, student.fullName);
-    
-    cout << "Введите возраст: ";
-    cin >> student.age;
-    
-    cout << "Введите направление: ";
-    cin.ignore();
-    getline(cin, student.direction);
-    
-    cout << "Введите группу: ";
-    getline(cin, student.group);
-    
-    cout << "Введите дату начала обучения (формат: ДД.ММ.ГГГГ): ";
-    getline(cin, student.startDate);
-    
-    students.push_back(student);
-    saveData();
-    cout << "\nУченик успешно добавлен!" << endl;
-}
-
-void displayStudents() {
-    if (students.empty()) {
-        cout << "\nБаза данных пуста!" << endl;
-        return;
-    }
-
-    cout << "\nСписок учеников:" << endl;
-    cout << setw(5) << "ID" << " | " << setw(30) << "ФИО" << " | " << setw(8) << "Возраст"
-         << " | " << setw(20) << "Направление" << " | " << setw(10) << "Группа" << " | " << setw(12) << "Дата начала" << endl;
-    cout << string(100, '-') << endl;
-
-    for (const auto& student : students) {
-        cout << setw(5) << student.id << " | " << setw(30) << student.fullName << " | " 
-             << setw(8) << student.age << " | " << setw(20) << student.direction << " | "
-             << setw(10) << student.group << " | " << setw(12) << student.startDate << endl;
-    }
-}
-
-void editStudent() {
-    int id;
-    cout << "\nВведите ID ученика для редактирования: ";
-    cin >> id;
-
-    auto it = find_if(students.begin(), students.end(),
-                     [id](const Student& s) { return s.id == id; });
-
-    if (it == students.end()) {
-        cout << "Ученик с таким ID не найден!" << endl;
-        return;
-    }
-
-    cout << "\nВведите новые данные (оставьте пустым, чтобы не изменять):" << endl;
-    
-    cout << "ФИО: ";
-    cin.ignore();
-    string input;
-    getline(cin, input);
-    if (!input.empty()) it->fullName = input;
-    
-    cout << "Возраст: ";
-    getline(cin, input);
-    if (!input.empty()) it->age = stoi(input);
-    
-    cout << "Направление: ";
-    getline(cin, input);
-    if (!input.empty()) it->direction = input;
-    
-    cout << "Группа: ";
-    getline(cin, input);
-    if (!input.empty()) it->group = input;
-    
-    cout << "Дата начала обучения: ";
-    getline(cin, input);
-    if (!input.empty()) it->startDate = input;
-
-    saveData();
-    cout << "\nДанные ученика успешно обновлены!" << endl;
-}
-
-void deleteStudent() {
-    int id;
-    cout << "\nВведите ID ученика для удаления: ";
-    cin >> id;
-
-    auto it = find_if(students.begin(), students.end(),
-                     [id](const Student& s) { return s.id == id; });
-
-    if (it == students.end()) {
-        cout << "Ученик с таким ID не найден!" << endl;
-        return;
-    }
-
-    students.erase(it);
-    saveData();
-    cout << "\nУченик успешно удален!" << endl;
-}
-
-void searchStudent() {
-    cout << "\nПоиск по:" << endl;
-    cout << "1. ID" << endl;
-    cout << "2. ФИО" << endl;
-    cout << "3. Направлению" << endl;
-    cout << "4. Группе" << endl;
-    cout << "Выберите критерий поиска: ";
-    
-    int choice;
-    cin >> choice;
-    cin.ignore();
-
-    string searchTerm;
-    cout << "Введите поисковый запрос: ";
-    getline(cin, searchTerm);
-
-    vector<Student> results;
-    for (const auto& student : students) {
-        bool match = false;
-        switch(choice) {
-            case 1:
-                match = (to_string(student.id) == searchTerm);
-                break;
-            case 2:
-                match = (student.fullName.find(searchTerm) != string::npos);
-                break;
-            case 3:
-                match = (student.direction.find(searchTerm) != string::npos);
-                break;
-            case 4:
-                match = (student.group.find(searchTerm) != string::npos);
-                break;
+        spisokUchenikov.push_back(uchenik);  // Добавляем ученика в список
+        if (uchenik.id >= sleduyushiyId) {  // Обновляем значение следующего ID
+            sleduyushiyId = uchenik.id + 1;
         }
-        if (match) results.push_back(student);
     }
+    fail.close();  // Закрываем файл
+}
 
-    if (results.empty()) {
-        cout << "\nНичего не найдено!" << endl;
+/**
+ * Сохраняет данные из памяти в файл
+ */
+void sohranitDannye() {
+    wofstream fail(imyaFaila);  // Открытие файла для записи
+    if (!fail.is_open()) {  // Если файл не может быть открыт
+        wcout << L"Ошибка при сохранении файла!" << endl;
+        return;
+    }
+    
+    fail.imbue(locale(fail.getloc(), new codecvt_utf8<wchar_t>));  // Установка кодировки для работы с UTF-8
+
+    // Запись всех учеников в файл
+    for (const auto& uchenik : spisokUchenikov) {
+        fail << uchenik.id << L"|" 
+             << uchenik.fio << L"|" 
+             << uchenik.vozrast << L"|"
+             << uchenik.napravlenie << L"|" 
+             << uchenik.gruppa << L"|" 
+             << uchenik.dataNachala << L"|" << endl;
+    }
+    fail.close();  // Закрываем файл
+}
+
+
+
+/**
+ * Добавляет нового ученика в базу данных
+ */
+void dobavitUchenika() {
+    Uchenik uchenik;
+    uchenik.id = sleduyushiyId++;  // Присваиваем новому ученику уникальный ID
+    
+    wcin.ignore();  // Очистка буфера ввода перед получением строк
+
+    // Ввод данных ученика
+    wcout << L"\nВведите ФИО: ";
+    getline(wcin, uchenik.fio);
+    
+    wcout << L"Введите возраст: ";
+    wcin >> uchenik.vozrast;
+    wcin.ignore();
+    
+    wcout << L"Введите направление: ";
+    getline(wcin, uchenik.napravlenie);
+    
+    wcout << L"Введите группу: ";
+    getline(wcin, uchenik.gruppa);
+    
+    wcout << L"Введите дату начала обучения: ";
+    getline(wcin, uchenik.dataNachala);
+    
+    spisokUchenikov.push_back(uchenik);  // Добавляем ученика в список
+    sohranitDannye();  // Сохраняем данные в файл
+    wcout << L"\nУченик успешно добавлен!" << endl;
+}
+
+/**
+ * Выводит список всех учеников
+ */
+void pokazatUchenikov() {
+    if (spisokUchenikov.empty()) {  // Если база данных пуста
+        wcout << L"\nБаза данных пуста!" << endl;
         return;
     }
 
-    cout << "\nРезультаты поиска:" << endl;
-    cout << setw(5) << "ID" << " | " << setw(30) << "ФИО" << " | " << setw(8) << "Возраст"
-         << " | " << setw(20) << "Направление" << " | " << setw(10) << "Группа" << " | " << setw(12) << "Дата начала" << endl;
-    cout << string(100, '-') << endl;
+    wcout << L"\nСписок учеников:" << endl;
+    wcout << L"ID | ФИО | Возраст | Направление | Группа | Дата начала" << endl;
+    wcout << L"------------------------------------------------" << endl;
 
-    for (const auto& student : results) {
-        cout << setw(5) << student.id << " | " << setw(30) << student.fullName << " | " 
-             << setw(8) << student.age << " | " << setw(20) << student.direction << " | "
-             << setw(10) << student.group << " | " << setw(12) << student.startDate << endl;
+    // Вывод всех учеников
+    for (const auto& uchenik : spisokUchenikov) {
+        wcout << uchenik.id << L" | " 
+              << uchenik.fio << L" | " 
+              << uchenik.vozrast << L" | "
+              << uchenik.napravlenie << L" | "
+              << uchenik.gruppa << L" | "
+              << uchenik.dataNachala << endl;
     }
 }
 
-void showMenu() {
-    cout << "\nБаза данных учеников Кванториума" << endl;
-    cout << "1. Просмотр всех учеников" << endl;
-    cout << "2. Добавить ученика" << endl;
-    cout << "3. Редактировать ученика" << endl;
-    cout << "4. Удалить ученика" << endl;
-    cout << "5. Поиск ученика" << endl;
-    cout << "0. Выход" << endl;
-    cout << "Выберите действие: ";
+/**
+ * Редактирует данные об ученике по ID
+ */
+void redaktirovatUchenika() {
+    int id;
+    wcout << L"\nВведите ID ученика для редактирования: ";
+    wcin >> id;
+    wcin.ignore();
+
+    bool naiden = false;  // Флаг, указывающий, найден ли ученик
+    // Поиск ученика по ID и редактирование его данных
+    for (auto& uchenik : spisokUchenikov) {
+        if (uchenik.id == id) {
+            naiden = true;
+            
+            wcout << L"\nВведите новые данные:" << endl;
+            
+            wcout << L"ФИО: ";
+            getline(wcin, uchenik.fio);
+            
+            wcout << L"Возраст: ";
+            wcin >> uchenik.vozrast;
+            wcin.ignore();
+            
+            wcout << L"Направление: ";
+            getline(wcin, uchenik.napravlenie);
+            
+            wcout << L"Группа: ";
+            getline(wcin, uchenik.gruppa);
+            
+            wcout << L"Дата начала обучения: ";
+            getline(wcin, uchenik.dataNachala);
+            
+            sohranitDannye();  // Сохраняем обновленные данные
+            wcout << L"\nДанные ученика успешно обновлены!" << endl;
+            break;
+        }
+    }
+    
+    if (!naiden) {  // Если ученик с таким ID не найден
+        wcout << L"Ученик с таким ID не найден!" << endl;
+    }
 }
 
+/**
+ * Удаляет ученика из базы данных по ID
+ */
+void udalitUchenika() {
+    int id;
+    wcout << L"\nВведите ID ученика для удаления: ";
+    wcin >> id;
+
+    // Поиск ученика и его удаление
+    for (int i = 0; i < spisokUchenikov.size(); i++) {
+        if (spisokUchenikov[i].id == id) {
+            spisokUchenikov.erase(spisokUchenikov.begin() + i);  // Удаление ученика из списка
+            sohranitDannye();  // Сохраняем обновленный список в файл
+            wcout << L"\nУченик успешно удален!" << endl;
+            return;
+        }
+    }
+    
+    wcout << L"Ученик с таким ID не найден!" << endl;
+}
+
+/**
+ * Выводит главное меню программы
+ */
+void pokazatMenu() {
+    wcout << L"\nБаза данных учеников Кванториума" << endl;
+    wcout << L"1. Просмотр всех учеников" << endl;
+    wcout << L"2. Добавить ученика" << endl;
+    wcout << L"3. Редактировать ученика" << endl;
+    wcout << L"4. Удалить ученика" << endl;
+    wcout << L"0. Выход" << endl;
+    wcout << L"Выберите действие: ";
+}
+
+
+
+/**
+ * Главная функция программы
+ */
 int main() {
-    setlocale(LC_ALL, "Russian");
-    loadData();
+    SetConsoleCP(CP_UTF8);         // Устанавливаем кодировку ввода в UTF-8
+    SetConsoleOutputCP(CP_UTF8);   // Устанавливаем кодировку вывода в UTF-8
+    
+    _setmode(_fileno(stdin), _O_U16TEXT);   // Устанавливаем режим для чтения Unicode
+    _setmode(_fileno(stdout), _O_U16TEXT);  // Устанавливаем режим для вывода Unicode
+    
+    zagruzitDannye();  // Загружаем данные из файла
 
+    int vybor;
     while (true) {
-        showMenu();
-        int choice;
-        cin >> choice;
+        pokazatMenu();  // Отображаем меню
+        wcin >> vybor;
 
-        switch(choice) {
-            case 0:
-                cout << "\nДо свидания!" << endl;
-                return 0;
-            case 1:
-                displayStudents();
-                break;
-            case 2:
-                addStudent();
-                break;
-            case 3:
-                editStudent();
-                break;
-            case 4:
-                deleteStudent();
-                break;
-            case 5:
-                searchStudent();
-                break;
-            default:
-                cout << "\nНеверный выбор! Попробуйте снова." << endl;
+        // Обработка выбора пользователя
+        switch(vybor) {
+            case 0: return 0;  // Выход из программы
+            case 1: pokazatUchenikov(); break;  // Просмотр всех учеников
+            case 2: dobavitUchenika(); break;  // Добавление нового ученика
+            case 3: redaktirovatUchenika(); break;  // Редактирование данных ученика
+            case 4: udalitUchenika(); break;  // Удаление ученика
+            default: wcout << L"\nНеверный выбор! Попробуйте снова." << endl;  // Неверный выбор
         }
     }
-
-    return 0;
-} 
+}
